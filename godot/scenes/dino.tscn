@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3 uid="uid://rgu1btiaoquv"]
+
+[ext_resource type="PackedScene" uid="uid://dixjd8ylybv8b" path="res://resources/art/carno 3_22.glb" id="1_la3et"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_nb2aw"]
+size = Vector3(2.06744, 1.72109, 3.44648)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_2jgde"]
+size = Vector3(1, 1.23621, 1.73999)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_j1bkr"]
+size = Vector3(1, 0.929199, 3.2677)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wwvfn"]
+size = Vector3(0.585571, 1.51465, 1.25085)
+
+[node name="CharacterBody3D" type="CharacterBody3D"]
+
+[node name="Pivot" type="Node3D" parent="."]
+
+[node name="Character" parent="Pivot" instance=ExtResource("1_la3et")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0083313, 2.40614, -0.82871)
+shape = SubResource("BoxShape3D_nb2aw")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.00961, 1.74927)
+shape = SubResource("BoxShape3D_2jgde")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.52413, -4.15572)
+shape = SubResource("BoxShape3D_j1bkr")
+
+[node name="CollisionShape3D4" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.709412, 0.828642, -0.711862)
+shape = SubResource("BoxShape3D_wwvfn")
+
+[node name="CollisionShape3D5" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.707391, 0.819242, -0.694098)
+shape = SubResource("BoxShape3D_wwvfn")

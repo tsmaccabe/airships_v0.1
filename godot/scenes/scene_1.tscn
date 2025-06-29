@@ -1,0 +1,47 @@
+[gd_scene load_steps=6 format=3 uid="uid://cw7k1x3ce8jgh"]
+
+[ext_resource type="Environment" uid="uid://dsp4cu71ns6dw" path="res://resources/scene_0_env.tres" id="1_3xosi"]
+[ext_resource type="PackedScene" uid="uid://clexthgblq33y" path="res://scenes/fin.tscn" id="3_cn2eb"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_knagl"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_kl852"]
+size = Vector2(20, 20)
+
+[sub_resource type="SphereMesh" id="SphereMesh_ka884"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, -1.20249, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("WorldBoundaryShape3D_knagl")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
+mesh = SubResource("PlaneMesh_kl852")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.462988, -0.51418, -0.721984, 0.484675, -0.535119, 0.691909, -0.742113, -0.670273, 0.00145598, -2.99172, 3.98569, 1.83821)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-0.685681, 0.16578, -0.708772, -0.0133893, 0.970682, 0.239993, 0.727779, 0.174049, -0.663359, -2.16271, 1.82389, -2.4084)
+environment = ExtResource("1_3xosi")
+
+[node name="Camera3D2" type="Camera3D" parent="."]
+transform = Transform3D(-0.685681, 0.16578, -0.708772, -0.0133893, 0.970682, 0.239993, 0.727779, 0.174049, -0.663359, -2.16271, 1.82389, -2.4084)
+environment = ExtResource("1_3xosi")
+current = true
+
+[node name="Fin" parent="." instance=ExtResource("3_cn2eb")]
+transform = Transform3D(0.136543, 0.961007, 0.240461, -0.236499, 0.267339, -0.934129, -0.961989, 0.0706799, 0.263781, 0, 1.33315, 0)
+gravity_scale = 0.2
+
+[node name="UpBase" type="MeshInstance3D" parent="Fin"]
+transform = Transform3D(0.213485, 0.0254755, -1.11357e-09, -0.0254755, 0.213485, 6.6211e-11, 1.11357e-09, 6.62022e-11, 0.215, 0.269622, -2.275e-08, -0.52046)
+mesh = SubResource("SphereMesh_ka884")
+
+[node name="UpHead" type="MeshInstance3D" parent="Fin"]
+transform = Transform3D(0.215, 0, 0, 0, 0.215, 3.0983e-15, 0, -3.0983e-15, 0.215, 0.276723, 0, 0)
+mesh = SubResource("SphereMesh_ka884")
+skeleton = NodePath("../UpBase")

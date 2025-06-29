@@ -1,0 +1,34 @@
+[gd_scene load_steps=5 format=3 uid="uid://do4qirvi2sfvy"]
+
+[ext_resource type="Shape3D" uid="uid://ca6kq286bhfpt" path="res://resources/thruster_rect_3dshape.tres" id="1_qcptu"]
+[ext_resource type="BoxMesh" uid="uid://k0o37jjnx8rd" path="res://resources/thruster_rect.tres" id="2_o7n6c"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qcptu"]
+size = Vector3(0.025, 0.25, 0.025)
+
+[sub_resource type="BoxMesh" id="BoxMesh_o7n6c"]
+size = Vector3(0.025, 0.25, 0.025)
+
+[node name="Thruster" type="Thruster"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = ExtResource("1_qcptu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = ExtResource("2_o7n6c")
+
+[node name="RigidBody3D" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.113, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D"]
+shape = SubResource("BoxShape3D_qcptu")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D"]
+mesh = SubResource("BoxMesh_o7n6c")
+
+[node name="HingeJoint3D" type="HingeJoint3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.1, 0, 0)
+node_a = NodePath("..")
+node_b = NodePath("../RigidBody3D")
+motor/enable = true
+motor/target_velocity = 0.0

@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://dkj6j0fx76ksy"]
+
+[ext_resource type="Shape3D" uid="uid://ca6kq286bhfpt" path="res://resources/thruster_rect_3dshape.tres" id="1_bda3k"]
+[ext_resource type="BoxMesh" uid="uid://k0o37jjnx8rd" path="res://resources/thruster_rect.tres" id="1_hnbbr"]
+
+[node name="Thruster" type="Thruster"]
+mass = 0.3
+metadata/Thrust = 10.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = ExtResource("1_bda3k")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1_hnbbr")

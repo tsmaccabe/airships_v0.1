@@ -1,0 +1,11 @@
+[package]
+name = "airships-godot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+godot = "0.2.4"
+nalgebra = "0.33.2"
+
+[lib]
+crate-type = ["cdylib"]  # Compile this crate to a dynamic C library.
