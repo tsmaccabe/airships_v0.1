@@ -1,27 +1,20 @@
 use std::any::Any;
 use std::f32::consts::PI;
 use std::str::FromStr;
+use std::ops::Deref;
 
 use godot::classes::input_map;
 use godot::classes::light_3d::Param;
-use godot::classes::Control;
+use godot::meta::AsArg;
+use godot::meta::AsObjectArg;
 use godot::prelude::*;
-use godot::classes::RigidBody3D;
-use godot::classes::IRigidBody3D;
-use godot::classes::HingeJoint3D;
-use godot::classes::IHingeJoint3D;
-use godot::classes::Node3D;
-use godot::classes::INode3D;
-use godot::classes::Marker3D;
-use godot::classes::IMarker3D;
-use godot::classes::MeshInstance3D;
-use godot::classes::IMeshInstance3D;
+use godot::classes::*;
+use godot::builtin::*; 
 
 use godot::*;
 
 use godot::global::sqrt;
 
-use nalgebra::Rotation;
 use nalgebra as nalg;
 
 struct AirshipsGodot;
@@ -71,6 +64,20 @@ fn ensure_unique_keys(keys: &Vec<String>) {
     }
 }
 
+fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -> Vec<Vector3> {
+    let mut dirs = Vec::new();
+    for pitch in pitches.into_iter() {
+        for yaw_ref in yaws.into_iter() {
+            let euler = Vector3::new(0., *yaw_ref, pitch);
+            
+            dirs.push(forward
+                .rotated(Vector3::new(0., 1., 0.), euler.x)
+                .rotated(Vector3::new(1., 0., 0.), euler.y)
+                .rotated(Vector3::new(0., 0., 1.), euler.z));
+        }
+    }
+    dirs
+}
 
 /* Rust Classes */
 
@@ -191,7 +198,7 @@ impl IRigidBody3D for Thruster {
 
         let thrust_vec = self.thrust * forward;
         self.thrust = self.base().get_meta("Thrust").to();
-        godot_print!("thrust_forward {}: {}, {}, {}", self.base().get_name(), forward.x, forward.y, forward.z);
+        //godot_print!("thrust_forward {}: {}, {}, {}", self.base().get_name(), forward.x, forward.y, forward.z);
         
         self.base_mut().apply_force(thrust_vec);
     }
@@ -200,7 +207,7 @@ impl IRigidBody3D for Thruster {
 #[derive(GodotClass)]
 #[class(base=RigidBody3D)]
 struct Balloon {
-    bouyancy: nalg::Vector3<f32>,
+    bouyancy: Vector3,
     base: Base<RigidBody3D>,
 }
 
@@ -210,14 +217,14 @@ impl IRigidBody3D for Balloon {
         godot_print!("Balloon initialized."); // Prints to the Godot console
         
         Self {
-            bouyancy: nalg::vector![0., 19., 0.],
+            bouyancy: Vector3::new(0., 19., 0.),
             base,
         }
     }
 
     fn physics_process(&mut self, delta: f64) {
         let bouyancy = self.bouyancy.clone();
-        self.base_mut().apply_force(vec3_nalg2godot(bouyancy));
+        self.base_mut().apply_force(bouyancy);
     }
 }
 
@@ -246,6 +253,79 @@ impl IRigidBody3D for Fin {
         let drag = -self.fin_drag * dir.dot(vel) * dir;
         //godot_print!("{rot}, {dir}, {normal}, {drag}, {vel}");
         self.base_mut().apply_force(drag);
+    }
+}
+
+#[derive(GodotClass)]
+#[class(base=Node3D)]
+struct RaySensorSuite {
+    #[var]
+    ray_targets_local: Array<Vector3>,
+    #[var]
+    hit_positions: Array<Vector3>,
+    #[var]
+    hit_normals: Array<Vector3>,
+    #[var]
+    hit_bodies: Array<Vector3>,
+    base: Base<Node3D>,
+}
+
+#[godot_api]
+impl INode3D for RaySensorSuite {
+    fn init(base: Base<Node3D>) -> Self {
+        godot_print!("RaySensorSuite initialized."); // Prints to the Godot console
+        let mut ray_targets_local = Array::new();
+        ray_targets_local.push(Vector3::new(0., -100., 0.));
+        
+        let mut hit_positions = Array::new();
+        hit_positions.push(Vector3::new(0., 0., 0.));
+        
+        let mut hit_normals = Array::new();
+        hit_normals.push(Vector3::new(0., 0., 0.));
+
+        let mut hit_bodies = Array::new();
+        hit_bodies.push(Vector3::new(0., 0., 0.));
+
+        Self {
+            ray_targets_local,
+            hit_positions,
+            hit_normals,
+            hit_bodies,
+            base,
+        }
+    }
+
+    fn physics_process(&mut self, delta: f64) {
+        let mut space_state = self.base()
+            .get_world_3d().unwrap()
+            .try_cast::<World3D>().unwrap()
+            .get_direct_space_state().unwrap();
+
+        let sensor_local_to_global = self.base().get_global_transform().affine_inverse();
+        let sensor_local_to_global_eulers = sensor_local_to_global.basis.get_euler();
+        let ray_origin_pos_global = self.base().get_global_position();
+
+        for i in 0..self.ray_targets_local.len() {
+            let target_global = self.ray_targets_local.at(i)
+                .rotated(Vector3::new(0., 1., 0.), -sensor_local_to_global_eulers.y)
+                .rotated(Vector3::new(1., 0., 0.), -sensor_local_to_global_eulers.x)
+                .rotated(Vector3::new(0., 0., 1.), -sensor_local_to_global_eulers.z) - sensor_local_to_global.origin;
+            
+            let result = space_state.intersect_ray(
+                &PhysicsRayQueryParameters3D::create(ray_origin_pos_global, target_global).unwrap()
+            );
+
+            match result.get("position").unwrap().try_to::<Vector3>() {
+                Ok(pos) => {
+                    godot_print!("{pos}");
+                    self.hit_positions.set(i, pos);
+                }
+                Err(_) => {
+                    godot_print!("nocollide");
+                    // No collision
+                }
+            }
+        }
     }
 }
 
@@ -297,7 +377,7 @@ struct AirshipController {
 #[godot_api]
 impl INode3D for AirshipController {
     fn init(base: Base<Node3D>) -> Self {
-        godot_print!("Balloon initialized."); // Prints to the Godot console
+        godot_print!("AirshipController initialized."); // Prints to the Godot console
 
         Self {
             controls: ControlPalette::new(keys_string()),
@@ -324,17 +404,39 @@ impl INode3D for AirshipController {
 
         let airship = self.base().get_child(0).unwrap(); // Physical Airship
 
-        airship.get_child(1).unwrap()
+        airship.get_child(0).unwrap()
             .set_meta("Thrust", &throttle_left.to_variant()); // Right Thruster
 
-        airship.get_child(2).unwrap()
+        airship.get_child(1).unwrap()
             .set_meta("Thrust", &throttle_right.to_variant()); // Left Thruster
 
-        airship.get_child(3).unwrap()
+        airship.get_child(2).unwrap()
             .set_meta("Thrust", &throttle_bottom.to_variant()); // Bottom Thruster
+
+        let mut marker = airship.get_child(3).unwrap().try_cast::<MeshInstance3D>().unwrap();
+        let children = airship.get_children();
+        //godot_print!("{children}");
+        let binding = airship.get_child(1).unwrap().get_child(0).unwrap().get_child(2).unwrap().try_cast::<RaySensorSuite>().unwrap();
+        let binding = binding.bind();
+        let rays_front = binding.deref();
+
+        
+        let binding = airship.get_child(2).unwrap().get_child(0).unwrap().get_child(2).unwrap().try_cast::<RaySensorSuite>().unwrap();
+        let binding = binding.bind();
+        let rays_bottom = binding.deref();
+
+        let hit_position = rays_front.hit_positions.at(0);
+
+        //godot_print!("{hit_position}");
+        marker.set_global_position(hit_position);
     }
 }
 
+/* Behavior Function */
+
+fn update_controls(vehicle: &mut AirshipController, controls: &mut ControlPalette) {
+    
+}
 
 /* Module */
 
