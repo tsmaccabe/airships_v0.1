@@ -4,6 +4,7 @@
 [ext_resource type="BoxMesh" uid="uid://k0o37jjnx8rd" path="res://resources/thruster_rect.tres" id="1_hnbbr"]
 
 [node name="Thruster" type="Thruster"]
+thrust = 1.0
 mass = 0.3
 metadata/Thrust = 10.0
 

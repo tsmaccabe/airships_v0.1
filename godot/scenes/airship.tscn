@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bfsvqmus2lg14"]
+[gd_scene load_steps=6 format=3 uid="uid://bfsvqmus2lg14"]
 
 [ext_resource type="PackedScene" uid="uid://c8u3fkvpi14l3" path="res://scenes/LiftBalloon.tscn" id="1_jc30l"]
 [ext_resource type="PackedScene" uid="uid://dkj6j0fx76ksy" path="res://scenes/thruster.tscn" id="2_xnx5r"]
@@ -8,93 +8,94 @@
 
 [sub_resource type="BoxMesh" id="BoxMesh_lht5w"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_fo1p0"]
-
 [node name="Airship" type="Node3D"]
 
 [node name="Balloon" parent="." instance=ExtResource("1_jc30l")]
 mass = 0.2
 
-[node name="PinJoint3D" type="PinJoint3D" parent="Balloon"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
-node_a = NodePath("../HingeJoint3DV/Fin")
-node_b = NodePath("../HingeJoint3DH/Fin")
-
-[node name="HingeJoint3DL" type="HingeJoint3D" parent="Balloon"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -0.05, -0.5)
-node_a = NodePath("..")
+[node name="HingeJoint3DL" type="HingeJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -0.5)
+node_a = NodePath("../Balloon")
 node_b = NodePath("ThrusterL")
 angular_limit/enable = true
 angular_limit/upper = 0.0
 angular_limit/lower = 0.0
 angular_limit/softness = 0.01
 
-[node name="ThrusterL" parent="Balloon/HingeJoint3DL" instance=ExtResource("2_xnx5r")]
+[node name="ThrusterL" parent="HingeJoint3DL" instance=ExtResource("2_xnx5r")]
+thrust = 0.12
 transform = Transform3D(-4.37114e-08, 4.37114e-08, 1, -4.37114e-08, 1, -4.37114e-08, -1, -4.37114e-08, -4.37114e-08, 0, -0.05, 0)
-metadata/Thrust = -0.5
+metadata/Thrust = 0.0
 
-[node name="HingeJoint3DR" type="HingeJoint3D" parent="Balloon"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -0.05, 0.5)
-node_a = NodePath("..")
+[node name="HingeJoint3DR" type="HingeJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0.5)
+node_a = NodePath("../Balloon")
 node_b = NodePath("ThrusterR")
 angular_limit/enable = true
 angular_limit/upper = 0.0
 angular_limit/lower = 0.0
 angular_limit/softness = 0.01
 
-[node name="ThrusterR" parent="Balloon/HingeJoint3DR" instance=ExtResource("2_xnx5r")]
+[node name="ThrusterR" parent="HingeJoint3DR" instance=ExtResource("2_xnx5r")]
+thrust = 0.2
 transform = Transform3D(-4.37114e-08, 4.37114e-08, 1, -4.37114e-08, 1, -4.37114e-08, -1, -4.37114e-08, -4.37114e-08, 0, 0.05, 0)
-metadata/Thrust = -0.5
+metadata/Thrust = 0.0
 
-[node name="HingeJoint3DV" type="HingeJoint3D" parent="Balloon"]
+[node name="HingeJoint3DV" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
-node_a = NodePath("..")
+node_a = NodePath("../Balloon")
 node_b = NodePath("Fin")
 angular_limit/enable = true
 angular_limit/upper = 0.0
 angular_limit/lower = 0.0
 angular_limit/softness = 0.01
 
-[node name="Fin" parent="Balloon/HingeJoint3DV" instance=ExtResource("3_d5eqk")]
+[node name="Fin" parent="HingeJoint3DV" instance=ExtResource("3_d5eqk")]
+fin_drag = 3.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, 0)
+mass = 0.3
 
-[node name="HingeJoint3DH" type="HingeJoint3D" parent="Balloon"]
+[node name="HingeJoint3DH" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
-node_a = NodePath("..")
+node_a = NodePath("../Balloon")
 node_b = NodePath("Fin")
 angular_limit/enable = true
 angular_limit/upper = 0.0
 angular_limit/lower = 0.0
 angular_limit/softness = 0.01
 
-[node name="Fin" parent="Balloon/HingeJoint3DH" instance=ExtResource("3_d5eqk")]
+[node name="Fin" parent="HingeJoint3DH" instance=ExtResource("3_d5eqk")]
+fin_drag = 3.0
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.3, 0, 0)
+mass = 0.3
 
-[node name="HingeJoint3DBL" type="HingeJoint3D" parent="Balloon"]
+[node name="HingeJoint3DBL" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -0.2, 0.5)
-node_a = NodePath("..")
+node_a = NodePath("../Balloon")
 node_b = NodePath("ThrusterBL")
 angular_limit/enable = true
 angular_limit/upper = 0.0
 angular_limit/lower = 0.0
 angular_limit/softness = 0.01
 
-[node name="ThrusterBL" parent="Balloon/HingeJoint3DBL" instance=ExtResource("2_xnx5r")]
-transform = Transform3D(-4.37114e-08, -1, -4.37114e-08, 1, -4.37114e-08, -4.37114e-08, 4.37114e-08, -4.37114e-08, 1, 0, 0.05, 0)
-metadata/Thrust = 1.0
+[node name="ThrusterBL" parent="HingeJoint3DBL" instance=ExtResource("2_xnx5r")]
+thrust = -2.3
+transform = Transform3D(4.37114e-08, 1, -4.37114e-08, 1, -4.37114e-08, -1.31134e-07, -1.31134e-07, -4.37114e-08, -1, 0, 0.05, -1.49012e-08)
+metadata/Thrust = -2.3
 
-[node name="HingeJoint3DBR" type="HingeJoint3D" parent="Balloon"]
+[node name="HingeJoint3DBR" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, -0.2, -0.5)
-node_a = NodePath("..")
+node_a = NodePath("../Balloon")
 node_b = NodePath("ThrusterBR")
 angular_limit/enable = true
 angular_limit/upper = 0.0
 angular_limit/lower = 0.0
 angular_limit/softness = 0.01
 
-[node name="ThrusterBR" parent="Balloon/HingeJoint3DBR" instance=ExtResource("2_xnx5r")]
-transform = Transform3D(-4.37114e-08, -1, -3.82137e-15, 1, -4.37114e-08, 8.74228e-08, -8.74228e-08, 2.11758e-22, 1, 0, -0.05, 0)
-metadata/Thrust = 1.0
+[node name="ThrusterBR" parent="HingeJoint3DBR" instance=ExtResource("2_xnx5r")]
+thrust = -2.3
+transform = Transform3D(4.37114e-08, 1, -8.74228e-08, 1, -4.37114e-08, 0, -3.55271e-15, -8.74228e-08, -1, 0, -0.05, 1.49012e-08)
+metadata/Thrust = -2.3
 
 [node name="HingeJoint3DNose" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
@@ -117,7 +118,8 @@ shape = SubResource("BoxShape3D_fo1p0")
 transform = Transform3D(-4.37114e-09, 0.1, 0, -0.1, -4.37114e-09, 0, 0, 0, 0.1, 0, 0, 0)
 mesh = SubResource("BoxMesh_lht5w")
 
-[node name="RaySensorSuite" type="RaySensorSuite" parent="HingeJoint3DNose/Nose"]
+[node name="RaySensorSuiteNose" type="RaySensorSuite" parent="HingeJoint3DNose/Nose"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06, 0, 0)
 
 [node name="HingeJoint3DBalast" type="HingeJoint3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
@@ -140,8 +142,10 @@ shape = SubResource("BoxShape3D_fo1p0")
 transform = Transform3D(-4.37114e-09, 0.1, 0, -0.1, -4.37114e-09, 0, 0, 0, 0.1, 0, 0, 0)
 mesh = SubResource("BoxMesh_lht5w")
 
-[node name="RaySensorSuite" type="RaySensorSuite" parent="HingeJoint3DBalast/Balast"]
+[node name="RaySensorSuiteBottom" type="RaySensorSuite" parent="HingeJoint3DBalast/Balast"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0)
-mesh = SubResource("BoxMesh_fo1p0")
+[node name="PinJoint3D" type="PinJoint3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+node_a = NodePath("../HingeJoint3DV/Fin")
+node_b = NodePath("../HingeJoint3DH/Fin")

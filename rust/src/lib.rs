@@ -1,7 +1,6 @@
 use std::any::Any;
 use std::f32::consts::PI;
 use std::str::FromStr;
-use std::ops::Deref;
 
 use godot::classes::input_map;
 use godot::classes::light_3d::Param;
@@ -9,12 +8,10 @@ use godot::meta::AsArg;
 use godot::meta::AsObjectArg;
 use godot::prelude::*;
 use godot::classes::*;
-use godot::builtin::*; 
 
 use godot::*;
 
-use godot::global::sqrt;
-
+use nalgebra::Rotation;
 use nalgebra as nalg;
 
 struct AirshipsGodot;
@@ -31,7 +28,6 @@ fn keys_string() -> Vec<String> {
     keys
 }
 
-
 fn vec3_godot2nalg(v: Vector3) -> nalg::Vector3<f32> {
     nalg::vector![v.x, v.y, v.z]
 }
@@ -40,15 +36,14 @@ fn vec3_nalg2godot(v: nalg::Vector3<f32>) -> Vector3 {
     Vector3::new(v.x, v.y, v.z)
 }
 
-
 fn euler_to_dir_godot(euler: Vector3) -> Vector3 {
     let pitch = euler.x;  // Rotation around X-axis
     let yaw = euler.y;    // Rotation around Y-axis
     
     Vector3::new(
-        -yaw.sin() * pitch.cos(),   // X component
+        yaw.sin() * pitch.cos(),   // X component
         pitch.sin(),                // Y component  
-        -yaw.cos() * pitch.cos(),   // Z component
+        yaw.cos() * pitch.cos(),   // Z component
     )
 }
 
@@ -64,12 +59,12 @@ fn ensure_unique_keys(keys: &Vec<String>) {
     }
 }
 
-fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -> Vec<Vector3> {
-    let mut dirs = Vec::new();
+fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -> Array<Vector3> {
+    let mut dirs = Array::new();
     for pitch in pitches.into_iter() {
         for yaw_ref in yaws.into_iter() {
             let euler = Vector3::new(0., *yaw_ref, pitch);
-            
+
             dirs.push(forward
                 .rotated(Vector3::new(0., 1., 0.), euler.x)
                 .rotated(Vector3::new(1., 0., 0.), euler.y)
@@ -133,6 +128,19 @@ impl ControlPalette {
     }
 }
 
+#[derive(Clone, Debug)]
+struct ControlPolicy {
+
+}
+
+impl ControlPolicy {
+    fn control_signal(self) -> ControlPalette {
+        let mut keypress = Vec::new();
+        //keypress.push("".to_string());
+        ControlPalette::new(keypress)
+    }
+}
+
 /* Godot Classes */
 
 #[gdextension]
@@ -176,6 +184,7 @@ impl IRigidBody3D for Player {
 #[derive(GodotClass)]
 #[class(base=RigidBody3D)]
 struct Thruster {
+    #[export]
     thrust: f32,
     base: Base<RigidBody3D>,
 }
@@ -197,7 +206,6 @@ impl IRigidBody3D for Thruster {
         let forward = euler_to_dir_godot(self.base().get_global_rotation() + Vector3::new(0., 0., 0.));
 
         let thrust_vec = self.thrust * forward;
-        self.thrust = self.base().get_meta("Thrust").to();
         //godot_print!("thrust_forward {}: {}, {}, {}", self.base().get_name(), forward.x, forward.y, forward.z);
         
         self.base_mut().apply_force(thrust_vec);
@@ -207,6 +215,7 @@ impl IRigidBody3D for Thruster {
 #[derive(GodotClass)]
 #[class(base=RigidBody3D)]
 struct Balloon {
+    #[export]
     bouyancy: Vector3,
     base: Base<RigidBody3D>,
 }
@@ -231,6 +240,7 @@ impl IRigidBody3D for Balloon {
 #[derive(GodotClass)]
 #[class(base=RigidBody3D)]
 struct Fin {
+    #[export]
     fin_drag: f32,
     base: Base<RigidBody3D>,
 }
@@ -253,79 +263,6 @@ impl IRigidBody3D for Fin {
         let drag = -self.fin_drag * dir.dot(vel) * dir;
         //godot_print!("{rot}, {dir}, {normal}, {drag}, {vel}");
         self.base_mut().apply_force(drag);
-    }
-}
-
-#[derive(GodotClass)]
-#[class(base=Node3D)]
-struct RaySensorSuite {
-    #[var]
-    ray_targets_local: Array<Vector3>,
-    #[var]
-    hit_positions: Array<Vector3>,
-    #[var]
-    hit_normals: Array<Vector3>,
-    #[var]
-    hit_bodies: Array<Vector3>,
-    base: Base<Node3D>,
-}
-
-#[godot_api]
-impl INode3D for RaySensorSuite {
-    fn init(base: Base<Node3D>) -> Self {
-        godot_print!("RaySensorSuite initialized."); // Prints to the Godot console
-        let mut ray_targets_local = Array::new();
-        ray_targets_local.push(Vector3::new(0., -100., 0.));
-        
-        let mut hit_positions = Array::new();
-        hit_positions.push(Vector3::new(0., 0., 0.));
-        
-        let mut hit_normals = Array::new();
-        hit_normals.push(Vector3::new(0., 0., 0.));
-
-        let mut hit_bodies = Array::new();
-        hit_bodies.push(Vector3::new(0., 0., 0.));
-
-        Self {
-            ray_targets_local,
-            hit_positions,
-            hit_normals,
-            hit_bodies,
-            base,
-        }
-    }
-
-    fn physics_process(&mut self, delta: f64) {
-        let mut space_state = self.base()
-            .get_world_3d().unwrap()
-            .try_cast::<World3D>().unwrap()
-            .get_direct_space_state().unwrap();
-
-        let sensor_local_to_global = self.base().get_global_transform().affine_inverse();
-        let sensor_local_to_global_eulers = sensor_local_to_global.basis.get_euler();
-        let ray_origin_pos_global = self.base().get_global_position();
-
-        for i in 0..self.ray_targets_local.len() {
-            let target_global = self.ray_targets_local.at(i)
-                .rotated(Vector3::new(0., 1., 0.), -sensor_local_to_global_eulers.y)
-                .rotated(Vector3::new(1., 0., 0.), -sensor_local_to_global_eulers.x)
-                .rotated(Vector3::new(0., 0., 1.), -sensor_local_to_global_eulers.z) - sensor_local_to_global.origin;
-            
-            let result = space_state.intersect_ray(
-                &PhysicsRayQueryParameters3D::create(ray_origin_pos_global, target_global).unwrap()
-            );
-
-            match result.get("position").unwrap().try_to::<Vector3>() {
-                Ok(pos) => {
-                    godot_print!("{pos}");
-                    self.hit_positions.set(i, pos);
-                }
-                Err(_) => {
-                    godot_print!("nocollide");
-                    // No collision
-                }
-            }
-        }
     }
 }
 
@@ -355,7 +292,7 @@ impl IHingeJoint3D for Servo {
 
         let constant = self.constant;
 
-        let d_angle = self.target_angle - (sqrt((self.base().get_rotation().x.powf(2.) + self.base().get_rotation().y.powf(2.) + self.base().get_rotation().z.powf(2.)) as f64) as f32);
+        let d_angle = self.target_angle - (godot::global::sqrt((self.base().get_rotation().x.powf(2.) + self.base().get_rotation().y.powf(2.) + self.base().get_rotation().z.powf(2.)) as f64) as f32);
 
         self.base_mut().set_param(godot::classes::hinge_joint_3d::Param::MOTOR_TARGET_VELOCITY, d_angle*constant);
     }
@@ -377,7 +314,7 @@ struct AirshipController {
 #[godot_api]
 impl INode3D for AirshipController {
     fn init(base: Base<Node3D>) -> Self {
-        godot_print!("AirshipController initialized."); // Prints to the Godot console
+        godot_print!("Balloon initialized."); // Prints to the Godot console
 
         Self {
             controls: ControlPalette::new(keys_string()),
@@ -404,38 +341,118 @@ impl INode3D for AirshipController {
 
         let airship = self.base().get_child(0).unwrap(); // Physical Airship
 
-        airship.get_child(0).unwrap()
+        airship.get_child(1).unwrap().get_child(0).unwrap()
             .set_meta("Thrust", &throttle_left.to_variant()); // Right Thruster
 
-        airship.get_child(1).unwrap()
+        airship.get_child(2).unwrap().get_child(0).unwrap()
             .set_meta("Thrust", &throttle_right.to_variant()); // Left Thruster
 
-        airship.get_child(2).unwrap()
+        airship.get_child(3).unwrap().get_child(0).unwrap()
             .set_meta("Thrust", &throttle_bottom.to_variant()); // Bottom Thruster
-
-        let mut marker = airship.get_child(3).unwrap().try_cast::<MeshInstance3D>().unwrap();
-        let children = airship.get_children();
-        //godot_print!("{children}");
-        let binding = airship.get_child(1).unwrap().get_child(0).unwrap().get_child(2).unwrap().try_cast::<RaySensorSuite>().unwrap();
-        let binding = binding.bind();
-        let rays_front = binding.deref();
-
-        
-        let binding = airship.get_child(2).unwrap().get_child(0).unwrap().get_child(2).unwrap().try_cast::<RaySensorSuite>().unwrap();
-        let binding = binding.bind();
-        let rays_bottom = binding.deref();
-
-        let hit_position = rays_front.hit_positions.at(0);
-
-        //godot_print!("{hit_position}");
-        marker.set_global_position(hit_position);
     }
 }
 
-/* Behavior Function */
+#[derive(GodotClass)]
+#[class(base=Node3D)]
+struct RaySensorSuite {
+    #[var]
+    ray_targets_local: Array<Vector3>,
+    #[var]
+    hit_positions: Array<Vector3>,
+    #[var]
+    hit_normals: Array<Vector3>,
+    #[var]
+    hit_bodies: Array<Vector3>,
+    base: Base<Node3D>,
+}
 
-fn update_controls(vehicle: &mut AirshipController, controls: &mut ControlPalette) {
-    
+#[godot_api]
+impl INode3D for RaySensorSuite {
+    fn init(base: Base<Node3D>) -> Self {
+        godot_print!("RaySensorSuite initialized."); // Prints to the Godot console
+
+        let mut hit_positions = Array::new();
+
+        let mut hit_normals = Array::new();
+
+        let mut hit_bodies = Array::new();
+
+        let mut pitches = Vec::new();
+        let mut yaws = Vec::new();
+        let n = 3;
+        for i in 0..n {
+                pitches.push(-PI/2. * (1. + 2. * (i as f32)/(n as f32 + 1.)));
+        }
+        for i in 0..n {
+                yaws.push(-PI/2. * (1. + 2. * (i as f32)/(n as f32 + 1.)));
+        }
+
+        let ray_targets_local = generate_ray_dirs(Vector3::new(1000., 0., 0.), pitches, &mut yaws);
+        
+        for _ in 0..(n*n) {
+            hit_positions.push(Vector3::new(0., 0., 0.));
+            hit_normals.push(Vector3::new(0., 0., 0.));
+            hit_bodies.push(Vector3::new(0., 0., 0.));
+        }
+
+        Self {
+            ray_targets_local,
+            hit_positions,
+            hit_normals,
+            hit_bodies,
+            base,
+        }
+    }
+
+    fn physics_process(&mut self, delta: f64) {
+        let mut space_state = self.base()
+            .get_world_3d().unwrap()
+            .try_cast::<World3D>().unwrap()
+            .get_direct_space_state().unwrap();
+
+        let sensor_local_to_global = self.base().get_global_transform().affine_inverse();
+        let sensor_local_to_global_eulers = sensor_local_to_global.basis.get_euler();
+        let ray_origin_pos_global = self.base().get_global_position();
+        
+        for i in 0..self.ray_targets_local.len() {
+            let target_global = self.ray_targets_local.at(i)
+                .rotated(Vector3::new(0., 1., 0.), -sensor_local_to_global_eulers.y)
+                .rotated(Vector3::new(1., 0., 0.), -sensor_local_to_global_eulers.x)
+                .rotated(Vector3::new(0., 0., 1.), -sensor_local_to_global_eulers.z) - sensor_local_to_global.origin;
+            
+            let result = space_state.intersect_ray(
+                &PhysicsRayQueryParameters3D::create(ray_origin_pos_global, target_global).unwrap()
+            );
+
+            let pos_result = result.get("position");
+            match pos_result {
+                Some(_) => {
+                    self.hit_positions.set(i, pos_result.unwrap().try_to::<Vector3>().unwrap());
+                }
+                None => {
+                    godot_print!("nocollide");
+                }
+            }
+
+            let norm_result = result.get("normal");
+            match norm_result {
+                Some(_) => {
+                    match norm_result.unwrap().try_to::<Vector3>() {
+                        Ok(norm) => {
+                            //godot_print!("{pos}");
+                            self.hit_normals.set(i, norm);
+                        }
+                        Err(_) => {
+                            godot_print!("nocollide");
+                        }
+                    }
+                }
+                None => {
+                    godot_print!("nocollide");
+                }
+            }
+        }
+    }
 }
 
 /* Module */

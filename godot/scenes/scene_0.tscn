@@ -24,10 +24,10 @@ shape = SubResource("WorldBoundaryShape3D_bbwan")
 mesh = SubResource("PlaneMesh_kcabi")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.99997, 3.12466e-05, -0.00779377, 0.00385989, 0.866758, 0.498713, 0.0067709, -0.498728, 0.866732, 11.9322, 9.43682, 6.2269)
+transform = Transform3D(0.99997, 3.12492e-05, -0.00779376, 0.00155959, 0.978964, 0.204027, 0.00763619, -0.204033, 0.978934, 16.7525, 2.73074, 25.9125)
 environment = ExtResource("1_bbwan")
 attributes = ExtResource("2_kcabi")
 current = true
 
 [node name="AirshipController" parent="." instance=ExtResource("3_ido5y")]
-transform = Transform3D(0.567743, -0.706931, 0.4218, 0.823206, 0.487552, -0.290905, 0, 0.512388, 0.858754, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0512478, 0.483771, 0.314192)
