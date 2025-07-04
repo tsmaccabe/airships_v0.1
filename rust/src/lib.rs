@@ -4,12 +4,12 @@ use std::str::FromStr;
 
 use godot::classes::input_map;
 use godot::classes::light_3d::Param;
+use godot::global::Key;
 use godot::meta::AsArg;
 use godot::meta::AsObjectArg;
 use godot::prelude::*;
 use godot::classes::*;
-
-use godot::*;
+use godot::global::*;
 
 use nalgebra::Rotation;
 use nalgebra as nalg;
@@ -303,9 +303,13 @@ impl IHingeJoint3D for Servo {
 struct AirshipController {
     controls: ControlPalette,
 
+    #[export]
     throttle_rate: f32,
+    #[export]
     forward_throttle: f32,
+    #[export]
     turn_throttle: f32,
+    #[export]
     vertical_throttle: f32,
 
     base: Base<Node3D>,
@@ -356,6 +360,8 @@ impl INode3D for AirshipController {
 #[class(base=Node3D)]
 struct RaySensorSuite {
     #[var]
+    lengths: Array<f32>,
+    #[var]
     ray_targets_local: Array<Vector3>,
     #[var]
     hit_positions: Array<Vector3>,
@@ -371,10 +377,10 @@ impl INode3D for RaySensorSuite {
     fn init(base: Base<Node3D>) -> Self {
         godot_print!("RaySensorSuite initialized."); // Prints to the Godot console
 
+        let mut lengths = Array::new();
+
         let mut hit_positions = Array::new();
-
         let mut hit_normals = Array::new();
-
         let mut hit_bodies = Array::new();
 
         let mut pitches = Vec::new();
@@ -390,12 +396,14 @@ impl INode3D for RaySensorSuite {
         let ray_targets_local = generate_ray_dirs(Vector3::new(1000., 0., 0.), pitches, &mut yaws);
         
         for _ in 0..(n*n) {
+            lengths.push(0.);
             hit_positions.push(Vector3::new(0., 0., 0.));
             hit_normals.push(Vector3::new(0., 0., 0.));
             hit_bodies.push(Vector3::new(0., 0., 0.));
         }
 
         Self {
+            lengths,
             ray_targets_local,
             hit_positions,
             hit_normals,
@@ -424,33 +432,31 @@ impl INode3D for RaySensorSuite {
                 &PhysicsRayQueryParameters3D::create(ray_origin_pos_global, target_global).unwrap()
             );
 
+            let norm_result = result.get("normal");
+            match norm_result {
+                Some(_) => {
+                    self.hit_normals.set(i, norm_result.unwrap().try_to::<Vector3>().unwrap());
+                }
+                None => {
+                    //godot_print!("nocollide");
+                }
+            }
+
             let pos_result = result.get("position");
             match pos_result {
                 Some(_) => {
                     self.hit_positions.set(i, pos_result.unwrap().try_to::<Vector3>().unwrap());
                 }
                 None => {
-                    godot_print!("nocollide");
+                    //godot_print!("nocollide");
                 }
             }
 
-            let norm_result = result.get("normal");
-            match norm_result {
-                Some(_) => {
-                    match norm_result.unwrap().try_to::<Vector3>() {
-                        Ok(norm) => {
-                            //godot_print!("{pos}");
-                            self.hit_normals.set(i, norm);
-                        }
-                        Err(_) => {
-                            godot_print!("nocollide");
-                        }
-                    }
-                }
-                None => {
-                    godot_print!("nocollide");
-                }
+            for i in 1..self.lengths.len() {
+                self.lengths.set(i, (self.base().get_global_position() - self.hit_positions.at(i)).length());
             }
+            let lengths = self.lengths.clone();
+            godot_print!("{lengths}");
         }
     }
 }
