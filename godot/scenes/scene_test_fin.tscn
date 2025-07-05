@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://cll40cjh3o4vx"]
+
+[ext_resource type="PackedScene" uid="uid://clexthgblq33y" path="res://scenes/fin.tscn" id="1_xdsyx"]
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_lesy6"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_b5dqb"]
+size = Vector2(20, 20)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.462988, -0.51418, -0.721984, 0.484675, -0.535119, 0.691908, -0.742113, -0.670273, 0.00145653, -2.99172, 3.98569, 1.83821)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, -1.20249, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
+shape = SubResource("WorldBoundaryShape3D_lesy6")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
+mesh = SubResource("PlaneMesh_b5dqb")
+
+[node name="Fin" parent="." instance=ExtResource("1_xdsyx")]
+transform = Transform3D(0.866026, 0, 0.5, -0.5, 0, 0.866025, 0, -1, -2.98023e-08, -0.4372, 0.208052, -0.222194)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.40359)

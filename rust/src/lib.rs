@@ -3,40 +3,42 @@ use std::f32::consts::PI;
 use std::str::FromStr;
 
 use godot::classes::input_map;
-use godot::classes::light_3d::Param;
 use godot::global::Key;
 use godot::meta::AsArg;
 use godot::meta::AsObjectArg;
 use godot::prelude::*;
 use godot::classes::*;
-use godot::global::*;
 
 use nalgebra::Rotation;
 use nalgebra as nalg;
+
 
 struct AirshipsGodot;
 
 /* Utilities */
 
-const KEYS: [&str; 6] = ["w", "a", "s", "d", "ctrl", "space"];
-
-fn keys_string() -> Vec<String> {
-    let mut keys: Vec<String> = Vec::new();
-    for key in KEYS {
-        keys.push(key.to_string());
-    }
-    keys
-}
-
-fn vec3_godot2nalg(v: Vector3) -> nalg::Vector3<f32> {
-    nalg::vector![v.x, v.y, v.z]
-}
-
-fn vec3_nalg2godot(v: nalg::Vector3<f32>) -> Vector3 {
-    Vector3::new(v.x, v.y, v.z)
-}
+const KEYS: [Key; 6] = [Key::W, Key::A, Key::S, Key::D, Key::CTRL, Key::SPACE];
 
 fn euler_to_dir_godot(euler: Vector3) -> Vector3 {
+    let pitch = euler.x;  // Rotation around X-axis
+    let yaw = euler.y;    // Rotation around Y-axis
+    
+    Vector3::new(
+        -yaw.sin() * pitch.cos(),
+        pitch.sin(),
+        -yaw.cos() * pitch.cos(),
+    )
+}
+
+fn quaternion_to_dir_godot(quat: Quaternion) -> Vector3 {
+    let normalized_quat = quat.normalized();
+
+    let forward = Vector3::new(0.0, 0.0, -1.0);
+
+    normalized_quat * forward
+}
+
+/*fn euler_to_dir_godot(euler: Vector3) -> Vector3 {
     let pitch = euler.x;  // Rotation around X-axis
     let yaw = euler.y;    // Rotation around Y-axis
     
@@ -45,9 +47,9 @@ fn euler_to_dir_godot(euler: Vector3) -> Vector3 {
         pitch.sin(),                // Y component  
         yaw.cos() * pitch.cos(),   // Z component
     )
-}
+} */
 
-fn ensure_unique_keys(keys: &Vec<String>) {
+fn ensure_unique_keys(keys: &Vec<Key>) {
     for (i, key1) in keys.clone().into_iter().enumerate() {
         for (j, key2) in keys.clone().into_iter().enumerate() {
             if i == j {
@@ -59,7 +61,7 @@ fn ensure_unique_keys(keys: &Vec<String>) {
     }
 }
 
-fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -> Array<Vector3> {
+/*fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -> Array<Vector3> {
     let mut dirs = Array::new();
     for pitch in pitches.into_iter() {
         for yaw_ref in yaws.into_iter() {
@@ -72,18 +74,36 @@ fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -
         }
     }
     dirs
+}*/
+
+/// Generates ray directions based on pitch and yaw inputs using quaternions.
+fn generate_ray_dirs(forward: Vector3, pitches: Vec<f32>, yaws: &mut Vec<f32>) -> Array<Vector3> {
+    let mut dirs = Array::new();
+
+    for pitch in pitches.into_iter() {
+        for yaw_ref in yaws.into_iter() {
+            // Create a quaternion from pitch and yaw (roll is 0)
+            let rotation = Quaternion::from_euler(Vector3::new(pitch, *yaw_ref, 0.0));
+
+            // Rotate the forward vector using the quaternion
+            let direction = rotation * forward;
+
+            // Add the resulting direction to the array
+            dirs.push(direction);
+        }
+    }
+
+    dirs
 }
 
 /* Rust Classes */
-
-#[derive(Clone, Debug)]
 struct ControlPalette {
-    keys: Vec<String>,
+    keys: Vec<Key>,
     pressed: Vec<bool>,
 }
 
 impl ControlPalette {
-    fn new(keys: Vec<String>) -> Self {
+    fn new(keys: Vec<Key>) -> Self {
         ensure_unique_keys(&keys);
 
         let mut pressed = Vec::new();
@@ -93,11 +113,11 @@ impl ControlPalette {
         Self {keys, pressed}
     }
 
-    fn get_value(&mut self, key: String) -> bool {
+    fn get_value(&mut self, key: Key) -> bool {
         self.pressed[self.keys.iter().position(|r| *r == key).unwrap()]
     }
 
-    fn get_values(&mut self, keys: Vec<String>) -> Vec<bool> {
+    fn get_values(&mut self, keys: Vec<Key>) -> Vec<bool> {
         ensure_unique_keys(&keys);
 
         let mut values = Vec::new();
@@ -108,14 +128,14 @@ impl ControlPalette {
         values
     }
 
-    fn set_value(&mut self, key: String, pressed: bool) {
+    fn set_value(&mut self, key: Key, pressed: bool) {
         if !self.keys.contains(&key) {
             panic!("ControlPalette: input key not found in this palette.")
         }
         self.pressed[self.keys.iter().position(|r| *r == key).unwrap()] = pressed;
     }
 
-    fn set_values(&mut self, keys: Vec<String>, pressed: Vec<bool>) {
+    fn set_values(&mut self, keys: Vec<Key>, pressed: Vec<bool>) {
         ensure_unique_keys(&keys);
 
         for (i, key) in keys.clone().into_iter().enumerate() {
@@ -128,13 +148,14 @@ impl ControlPalette {
     }
 }
 
-#[derive(Clone, Debug)]
 struct ControlPolicy {
 
 }
 
 impl ControlPolicy {
-    fn control_signal(self) -> ControlPalette {
+    fn control_signal(self, ) -> ControlPalette {
+        //let input = 
+        
         let mut keypress = Vec::new();
         //keypress.push("".to_string());
         ControlPalette::new(keypress)
@@ -146,7 +167,7 @@ impl ControlPolicy {
 #[gdextension]
 unsafe impl ExtensionLibrary for AirshipsGodot {}
 
-#[derive(GodotClass)]
+/*#[derive(GodotClass)]
 #[class(base=RigidBody3D)]
 struct Player {
     speed: f32,
@@ -179,7 +200,7 @@ impl IRigidBody3D for Player {
             .component_mul(&vec3_godot2nalg(-self.base().get_angular_velocity()));
         self.base_mut().apply_torque(vec3_nalg2godot(drag_ang_to_apply));
     }
-}
+}*/
 
 #[derive(GodotClass)]
 #[class(base=RigidBody3D)]
@@ -203,10 +224,10 @@ impl IRigidBody3D for Thruster {
     fn physics_process(&mut self, delta: f64) {
         let delta32 = delta as f32;
 
-        let forward = euler_to_dir_godot(self.base().get_global_rotation() + Vector3::new(0., 0., 0.));
+        let forward = euler_to_dir_godot(self.base().get_global_rotation());
 
         let thrust_vec = self.thrust * forward;
-        //godot_print!("thrust_forward {}: {}, {}, {}", self.base().get_name(), forward.x, forward.y, forward.z);
+        godot_print!("thrust_vec {} {}: {}, {}, {}", self.base().get_name(), self.thrust, thrust_vec.x, thrust_vec.y, thrust_vec.z);
         
         self.base_mut().apply_force(thrust_vec);
     }
@@ -269,8 +290,11 @@ impl IRigidBody3D for Fin {
 #[derive(GodotClass)]
 #[class(base=HingeJoint3D)]
 struct Servo {
+    #[export]
     constant: f32,
+    #[export]
     damping: f32,
+    #[export]
     target_angle: f32,
     base: Base<HingeJoint3D>,
 }
@@ -302,14 +326,16 @@ impl IHingeJoint3D for Servo {
 #[class(base=Node3D)]
 struct AirshipController {
     controls: ControlPalette,
+    policy: ControlPolicy,
 
     #[export]
     throttle_rate: f32,
-    #[export]
+
+    #[var]
     forward_throttle: f32,
-    #[export]
+    #[var]
     turn_throttle: f32,
-    #[export]
+    #[var]
     vertical_throttle: f32,
 
     base: Base<Node3D>,
@@ -321,38 +347,58 @@ impl INode3D for AirshipController {
         godot_print!("Balloon initialized."); // Prints to the Godot console
 
         Self {
-            controls: ControlPalette::new(keys_string()),
-            throttle_rate: 0.1,
-            forward_throttle: 0.5,
+            controls: ControlPalette::new(KEYS.to_vec()),
+            policy: ControlPolicy{},
+            throttle_rate: 0.02,
+            forward_throttle: 0.0,
             turn_throttle: 0.,
-            vertical_throttle: 0.5,
+            vertical_throttle: 4.,
             base,
         }
     }
 
     fn physics_process(&mut self, delta: f64) {
-        let keys = keys_string();
+        for key in self.controls.keys.clone() {
+            let input = Input::singleton();
+            self.controls.set_value(key, input.is_key_pressed(key));
+            godot_print!("{}", self.controls.get_value(key));
+        }
 
-        self.forward_throttle = self.forward_throttle + self.throttle_rate * ((self.controls.get_value(keys[0].clone()) as i32 - self.controls.get_value(keys[2].clone()) as i32) as f32);
-
-        self.turn_throttle = self.turn_throttle + self.throttle_rate * ((self.controls.get_value(keys[3].clone()) as i32 - self.controls.get_value(keys[1].clone()) as i32) as f32);
+        let w = self.controls.get_value(KEYS[0].clone()) as i32;
+        let a = self.controls.get_value(KEYS[1].clone()) as i32;
+        let s = self.controls.get_value(KEYS[2].clone()) as i32;
+        let d = self.controls.get_value(KEYS[3].clone()) as i32;
+        let space = self.controls.get_value(KEYS[4].clone()) as i32;
+        let ctrl = self.controls.get_value(KEYS[5].clone()) as i32;
         
-        self.vertical_throttle = self.vertical_throttle + self.throttle_rate * ((self.controls.get_value(keys[5].clone()) as i32 - self.controls.get_value(keys[4].clone()) as i32) as f32);
+        self.forward_throttle = self.forward_throttle - self.throttle_rate * ((w - s) as f32);
+        self.turn_throttle = self.turn_throttle - self.throttle_rate * ((d - a) as f32);
+        self.vertical_throttle = self.vertical_throttle - self.throttle_rate * ((space - ctrl) as f32);
 
         let throttle_right = self.forward_throttle - self.turn_throttle;
         let throttle_left = self.forward_throttle + self.turn_throttle;
-        let throttle_bottom = self.vertical_throttle;
+        let throttle_bottomright = self.vertical_throttle;
+        let throttle_bottomleft = self.vertical_throttle;
 
         let airship = self.base().get_child(0).unwrap(); // Physical Airship
 
         airship.get_child(1).unwrap().get_child(0).unwrap()
-            .set_meta("Thrust", &throttle_left.to_variant()); // Right Thruster
+            .try_cast::<Thruster>().unwrap()
+            .set("thrust", &throttle_right.to_variant());
 
         airship.get_child(2).unwrap().get_child(0).unwrap()
-            .set_meta("Thrust", &throttle_right.to_variant()); // Left Thruster
+            .try_cast::<Thruster>().unwrap()
+            .set("thrust", &throttle_left.to_variant());
 
         airship.get_child(3).unwrap().get_child(0).unwrap()
-            .set_meta("Thrust", &throttle_bottom.to_variant()); // Bottom Thruster
+            .try_cast::<Thruster>().unwrap()
+            .set("thrust", &throttle_bottomright.to_variant());
+
+        airship.get_child(4).unwrap().get_child(0).unwrap()
+            .try_cast::<Thruster>().unwrap()
+            .set("thrust", &throttle_bottomleft.to_variant());
+
+
     }
 }
 
@@ -385,14 +431,15 @@ impl INode3D for RaySensorSuite {
 
         let mut pitches = Vec::new();
         let mut yaws = Vec::new();
-        let n = 3;
+        let n = 7;
         for i in 0..n {
-                pitches.push(-PI/2. * (1. + 2. * (i as f32)/(n as f32 + 1.)));
+                pitches.push(-PI/4. * (1. - 2.*(i as f32 + 0.5)/(n as f32)));
         }
         for i in 0..n {
-                yaws.push(-PI/2. * (1. + 2. * (i as f32)/(n as f32 + 1.)));
+                yaws.push(-PI/4. * (1. - 2.*(i as f32 + 0.5)/(n as f32)));
         }
 
+        godot_print!("{:?}, {:?}", pitches, yaws);
         let ray_targets_local = generate_ray_dirs(Vector3::new(1000., 0., 0.), pitches, &mut yaws);
         
         for _ in 0..(n*n) {
@@ -417,7 +464,8 @@ impl INode3D for RaySensorSuite {
             .get_world_3d().unwrap()
             .try_cast::<World3D>().unwrap()
             .get_direct_space_state().unwrap();
-
+        
+        
         let sensor_local_to_global = self.base().get_global_transform().affine_inverse();
         let sensor_local_to_global_eulers = sensor_local_to_global.basis.get_euler();
         let ray_origin_pos_global = self.base().get_global_position();
@@ -456,7 +504,7 @@ impl INode3D for RaySensorSuite {
                 self.lengths.set(i, (self.base().get_global_position() - self.hit_positions.at(i)).length());
             }
             let lengths = self.lengths.clone();
-            godot_print!("{lengths}");
+            //godot_print!("{lengths}");
         }
     }
 }

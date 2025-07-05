@@ -1,13 +1,15 @@
 [gd_scene load_steps=6 format=3 uid="uid://dl42x018lbtuy"]
 
-[ext_resource type="Environment" uid="uid://dsp4cu71ns6dw" path="res://resources/scene_0_env.tres" id="1_bbwan"]
-[ext_resource type="CameraAttributesPractical" uid="uid://d2ue5tas3ivl0" path="res://resources/scene_0_cam_attr.tres" id="2_kcabi"]
+[ext_resource type="Texture2D" uid="uid://cr6dt3n2si78s" path="res://resources/grass_tex.tres" id="1_1f5di"]
 [ext_resource type="PackedScene" uid="uid://bu8qmpiak54fe" path="res://scenes/airship_controller.tscn" id="3_ido5y"]
 
 [sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_bbwan"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_kcabi"]
 size = Vector2(20, 20)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1f5di"]
+albedo_texture = ExtResource("1_1f5di")
 
 [node name="Node3D" type="Node3D"]
 
@@ -22,12 +24,7 @@ shape = SubResource("WorldBoundaryShape3D_bbwan")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
 mesh = SubResource("PlaneMesh_kcabi")
-
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.99997, 3.12492e-05, -0.00779376, 0.00155959, 0.978964, 0.204027, 0.00763619, -0.204033, 0.978934, 16.7525, 2.73074, 25.9125)
-environment = ExtResource("1_bbwan")
-attributes = ExtResource("2_kcabi")
-current = true
+surface_material_override/0 = SubResource("StandardMaterial3D_1f5di")
 
 [node name="AirshipController" parent="." instance=ExtResource("3_ido5y")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0512478, 0.483771, 0.314192)
+transform = Transform3D(0.999827, -0.0186218, 0, 0.0186218, 0.999827, 0, 0, 0, 1, -0.024225, 0.83156, 0.332945)

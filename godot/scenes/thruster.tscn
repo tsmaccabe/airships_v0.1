@@ -6,7 +6,6 @@
 [node name="Thruster" type="Thruster"]
 thrust = 1.0
 mass = 0.3
-metadata/Thrust = 10.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = ExtResource("1_bda3k")
